@@ -3,6 +3,7 @@ const router = express.Router();
 const auth = require("../middleware/auth");
 const tags = require("../model/tags");
 const notes = require("../model/notes");
+const notificationManager = require('./notifications_route')
 
 var lastNoteId = 4;
 
@@ -13,6 +14,7 @@ router.get('/', auth, (req, res, next) => {
 
 router.post('/',auth, (req, res, next) => {
     try {
+        const token = req.headers["not-token"];
         const note = {
             id: lastNoteId,
             title: req.body.title,
@@ -23,7 +25,25 @@ router.post('/',auth, (req, res, next) => {
         lastNoteId++;
         notes.push(note);
         console.log("Note Added");
-        res.status(200).send(note);
+        const message_notification = {
+            notification: {
+               title: "Note Created",
+               body: note.title + " has been created"
+            },
+            data: {
+                note_id: ""+ note.id,
+                action: "Note_Detail"
+            }
+        };
+        notificationManager(message_notification, token)
+        .then( response => {
+            res.status(200).send(note);
+        })
+        .catch( error => {
+               console.log(error);
+               res.status(500).send(error);
+        });
+        
     } catch (error) {
         console.log(error);
         res.status(500).send("Error Adding a new note");
